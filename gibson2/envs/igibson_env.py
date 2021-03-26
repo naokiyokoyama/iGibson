@@ -475,7 +475,10 @@ if __name__ == '__main__':
         for _ in range(100):  # 10 seconds
             action = env.action_space.sample()
             state, reward, done, _ = env.step(action)
-            print('reward', reward)
+            # print('reward', reward)
+            # print('action', action)
+            # print('state', state.keys())
+            print('state', state['task_obs'])
             if done:
                 break
         print('Episode finished after {} timesteps, took {} seconds.'.format(
