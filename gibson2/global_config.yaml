@@ -1,5 +1,5 @@
-assets_path: data/assets # put either absolute path or relative to current directory
-g_dataset_path: data/g_dataset
-ig_dataset_path: data/ig_dataset
-threedfront_dataset_path: data/threedfront_dataset
-cubicasa_dataset_path: data/cubicasa_dataset
+assets_path: /srv/datasets/gibson2/data/assets
+cubicasa_dataset_path: /srv/datasets/gibson2/data/assetscubicasa_dataset
+g_dataset_path: /srv/datasets/gibson2/data/g_dataset
+ig_dataset_path: /srv/datasets/gibson2/data/ig_dataset
+threedfront_dataset_path: /srv/datasets/gibson2/data/threedfront_dataset
