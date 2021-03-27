@@ -263,8 +263,7 @@ class PointNavResNetNet(Net):
             visual_feats = self.visual_fc(visual_feats)
             x.append(visual_feats)
 
-        goal_observations = observations["pointgoal_with_gps_compass"
-        ]
+        goal_observations = observations["pointgoal_with_gps_compass"]
         goal_observations = torch.stack(
             [
                 goal_observations[:, 0],

@@ -187,23 +187,7 @@ class PointNavFixedTask(BaseTask):
         """
         task_obs = self.global_to_local(env, self.target_pos)[:2]
         if self.goal_format == 'polar':
-            # task_obs = np.array(cartesian_to_polar(task_obs[0], task_obs[1]))
-
-            agent_x, agent_y = env.robots[0].get_position()[:2]
-            agent_rotation = env.robots[0].get_rpy()[2]
-            agent_coordinates = np.array([agent_x, agent_y])
-            rho = np.linalg.norm(agent_coordinates - self.target_pos[:2])
-            theta = (
-                np.arctan2(
-                    self.target_pos[1] - agent_coordinates[1],
-                    self.target_pos[0]- agent_coordinates[0]
-                )
-                - agent_rotation
-            )
-            theta = theta % (2 * np.pi)
-            if theta >= np.pi:
-                theta = -((2 * np.pi) - theta)
-            task_obs = np.array([rho, theta])
+            task_obs = np.array(cartesian_to_polar(task_obs[0], task_obs[1]))
 
         # linear velocity along the x-axis
         linear_velocity = rotate_vector_3d(
