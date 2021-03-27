@@ -1013,6 +1013,7 @@ class MeshRenderer(object):
                 orn = instance.robot.eyes.get_orientation()
                 mat = quat2rotmat(xyzw2wxyz(orn))[:3, :3]
                 view_direction = mat.dot(np.array([1, 0, 0]))
+                view_direction[-1]=0.0
                 self.set_camera(camera_pos, camera_pos +
                                 view_direction, [0, 0, 1], cache=True)
                 hidden_instances = []

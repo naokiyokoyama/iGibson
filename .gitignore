@@ -1,3 +1,6 @@
+# Large media
+*.mp4
+
 *.pyc
 *.pkl
 *.so

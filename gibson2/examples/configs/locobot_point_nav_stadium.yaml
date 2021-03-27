@@ -52,15 +52,15 @@ initial_pos_z_offset: 0.1
 collision_ignore_link_a_ids: [1, 2, 3, 4]  # ignore collisions with these robot links
 
 # sensor spec
-# output: [task_obs, rgb, depth]
-output: [task_obs, depth]
+output: [task_obs, rgb, depth]
 # image
 # Intel Realsense Depth Camera D435
 # https://store.intelrealsense.com/buy-intel-realsense-depth-camera-d435.html
 fisheye: false
 image_width: 256
 image_height: 256
-vertical_fov: 42.5
+# vertical_fov: 42.5
+vertical_fov: 90
 # depth
 depth_low : 0.1
 depth_high: 10.0
@@ -70,4 +70,4 @@ depth_noise_rate: 0.0
 
 # visual objects
 visual_object_at_initial_target_pos: true
-target_visual_object_visible_to_agent: false
+target_visual_object_visible_to_agent: true
