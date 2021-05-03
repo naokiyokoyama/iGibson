@@ -45,6 +45,7 @@ class Challenge:
             env_config['scene_episode_config_name'] = json_file
             env = iGibsonEnv(config_file=env_config,
                              mode='headless',
+                             device_idx=int(os.environ['CUDA_VISIBLE_DEVICES']),
                              action_timestep=1.0 / 10.0,
                              physics_timestep=1.0 / 40.0)
 

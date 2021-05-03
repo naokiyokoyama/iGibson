@@ -4,6 +4,7 @@ from habitat_cont.model import PointNavResNetAgent
 import argparse
 import time
 import numpy as np
+import os
 
 import cv2
 
@@ -34,6 +35,7 @@ if __name__ == '__main__':
 
     env = iGibsonEnv(config_file=args.config,
                      mode=args.mode,
+                     device_idx=int(os.environ['CUDA_VISIBLE_DEVICES']),
                      action_timestep=1.0 / 10.0,
                      physics_timestep=1.0 / 240.0)
 

@@ -1,5 +1,5 @@
-assets_path: /srv/datasets/gibson2/data/assets
+assets_path: /coc/pskynet3/nyokoyama3/datasets/igibson/gibson_challenge_data_2021/assets
 cubicasa_dataset_path: /srv/datasets/gibson2/data/assetscubicasa_dataset
 g_dataset_path: /srv/datasets/gibson2/data/g_dataset
-ig_dataset_path: /srv/datasets/gibson2/data/ig_dataset
+ig_dataset_path: /coc/pskynet3/nyokoyama3/datasets/igibson/gibson_challenge_data_2021/ig_dataset
 threedfront_dataset_path: /srv/datasets/gibson2/data/threedfront_dataset

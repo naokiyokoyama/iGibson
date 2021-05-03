@@ -1,6 +1,7 @@
-from habitat_cont.rl.resnet_policy import (
+from habitat_baselines.rl.ddppo.policy.resnet_policy import (
     PointNavResNetPolicy,
 )
+from habitat.core.spaces import ActionSpace, EmptySpace
 
 import json
 import numpy as np
@@ -12,7 +13,7 @@ from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from collections import OrderedDict, defaultdict
 
-DEVICE = torch.device("cpu")
+DEVICE = torch.device("cuda")
 
 def to_tensor(v): # DON'T CHANGE
     if torch.is_tensor(v):
@@ -30,7 +31,7 @@ class PointNavResNetAgent:
             self.DISCRETE_4 = True
         elif 'd6' in weights_path:
             self.DISCRETE_6 = True
-        elif 'gaussian' in weights_path:
+        elif 'gaussian' in weights_path or 'sn_' in weights_path:
             self.GAUSSIAN = True
 
         self.model = self.load_model(weights_path)
@@ -39,7 +40,8 @@ class PointNavResNetAgent:
     def load_model(self, weights_path):
 
         depth_256_space = SpaceDict({
-            'depth': spaces.Box(low=0., high=1., shape=(256,256,1)),
+            # 'depth': spaces.Box(low=0., high=1., shape=(256,256,1)),
+            'depth': spaces.Box(low=0., high=1., shape=(180,320,1)),
             'pointgoal_with_gps_compass': spaces.Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
@@ -49,8 +51,11 @@ class PointNavResNetAgent:
         })
 
         if self.GAUSSIAN:
-            action_space = spaces.Box(
-                np.array([float('-inf'),float('-inf')]), np.array([float('inf'),float('inf')])
+            action_space = ActionSpace(
+                {
+                    "linear_velocity": EmptySpace(),
+                    "angular_velocity": EmptySpace(),
+                }
             )
             action_distribution = 'gaussian'
             dim_actions = 2
@@ -71,8 +76,8 @@ class PointNavResNetAgent:
             num_recurrent_layers=2,
             backbone='resnet50',
             normalize_visual_inputs=False,
-            action_distribution=action_distribution,
-            dim_actions=dim_actions
+            force_blind_policy=False,
+            action_distribution_type=action_distribution,
         )
         model.to(DEVICE)
 
@@ -90,13 +95,14 @@ class PointNavResNetAgent:
         return model
 
     def reset(self):
+
         self.test_recurrent_hidden_states = torch.zeros(
+            1, # self.config.NUM_ENVIRONMENTS,
             self.model.net.num_recurrent_layers,
-            1, # num processes
-            512, # hidden size
+            512, # ppo_cfg.hidden_size,
             device=DEVICE,
         )
-        self.not_done_masks = torch.zeros(1, 1, device=DEVICE)
+        self.not_done_masks = torch.zeros(1, 1, dtype=torch.bool, device=DEVICE)
 
         if self.GAUSSIAN:
             self.prev_actions = torch.zeros(1, 2, device=DEVICE)
@@ -129,7 +135,7 @@ class PointNavResNetAgent:
                 deterministic=True,
             )
         self.prev_actions.copy_(actions)
-        self.not_done_masks = torch.ones(1, 1, device=DEVICE)
+        self.not_done_masks = torch.ones(1, 1, dtype=torch.bool, device=DEVICE)
 
         actions = actions.squeeze()
 
@@ -137,13 +143,9 @@ class PointNavResNetAgent:
         max_angular_speed = 1.0
 
         if self.GAUSSIAN:
-            move_amount = -torch.tanh(actions[0]).item()
-            turn_amount = torch.tanh(actions[1]).item()
-            move_amount = (move_amount+1.)/2.*max_linear_speed
-            turn_amount *= max_angular_speed
-
-            if move_amount < 0.1 and abs(turn_amount/max_angular_speed) < 0.05:
-                print('[STOP HAS BEEN CALLED]')
+            move_amount = torch.clip(actions[0], min=-1, max=1).item()
+            turn_amount = torch.clip(actions[1], min=-1, max=1).item()
+            move_amount = (move_amount+1.)/2.
 
         elif self.DISCRETE_4:
             action_index = actions.item()

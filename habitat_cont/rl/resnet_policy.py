@@ -64,7 +64,8 @@ class ResNetEncoder(nn.Module):
         spatial_size=128,
         make_backbone=None,
         normalize_visual_inputs=False,
-        obs_transform=ResizeCenterCropper(size=(256, 256)),
+        # obs_transform=ResizeCenterCropper(size=(256, 256)),
+        obs_transform=None,
     ):
         super().__init__()
 
@@ -106,13 +107,16 @@ class ResNetEncoder(nn.Module):
             )
             self.compression = nn.Sequential(
                 nn.Conv2d(
-                    self.backbone.final_channels,
-                    num_compression_channels,
+                    # self.backbone.final_channels,
+                    # num_compression_channels,
+                    1024,
+                    512,
                     kernel_size=3,
                     padding=1,
                     bias=False,
                 ),
-                nn.GroupNorm(1, num_compression_channels),
+                # nn.GroupNorm(1, num_compression_channels),
+                nn.GroupNorm(1, 512),
                 nn.ReLU(True),
             )
 
@@ -224,9 +228,10 @@ class PointNavResNetNet(Net):
 
         if not self.visual_encoder.is_blind:
             self.visual_fc = nn.Sequential(
-                Flatten(),
+                nn.Flatten(),
                 nn.Linear(
-                    np.prod(self.visual_encoder.output_shape), hidden_size
+                    7680, hidden_size
+                    # np.prod(self.visual_encoder.output_shape), hidden_size
                 ),
                 nn.ReLU(True),
             )

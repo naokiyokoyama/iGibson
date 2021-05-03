@@ -110,11 +110,19 @@ class DualCategoricalNet(nn.Module):
         return CustomFixedDualCategorical(y1,y2)
 
 class GaussianNet(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(
+        self,
+        num_inputs: int,
+        num_outputs: int,
+        std_min: float = 1e-6,
+        std_max: float = 1,
+    ) -> None:
         super().__init__()
-        
-        self.mu  = nn.Linear(num_inputs, num_outputs)
+
+        self.mu = nn.Linear(num_inputs, num_outputs)
         self.std = nn.Linear(num_inputs, num_outputs)
+        self.std_min = std_min
+        self.std_max = std_max
 
         nn.init.orthogonal_(self.mu.weight, gain=0.01)
         nn.init.constant_(self.mu.bias, 0)
@@ -122,16 +130,34 @@ class GaussianNet(nn.Module):
         nn.init.constant_(self.std.bias, 0)
 
     def forward(self, x):
-        mu = self.mu(x)
-        std = self.std(x)
-
-        std = torch.clamp(std, min=1e-6, max=1)
-
-        # std = torch.clamp(std, min=-5, max=2)
-        # std = torch.clamp(std, min=-5, max=0)
-        # std = std.exp()
+        mu = torch.tanh(self.mu(x))
+        std = torch.clamp(self.std(x), min=self.std_min, max=self.std_max)
 
         return CustomNormal(mu, std)
+
+# class GaussianNet(nn.Module):
+#     def __init__(self, num_inputs, num_outputs):
+#         super().__init__()
+        
+#         self.mu  = nn.Linear(num_inputs, num_outputs)
+#         self.std = nn.Linear(num_inputs, num_outputs)
+
+#         nn.init.orthogonal_(self.mu.weight, gain=0.01)
+#         nn.init.constant_(self.mu.bias, 0)
+#         nn.init.orthogonal_(self.std.weight, gain=0.01)
+#         nn.init.constant_(self.std.bias, 0)
+
+#     def forward(self, x):
+#         mu = self.mu(x)
+#         std = self.std(x)
+
+#         std = torch.clamp(std, min=1e-6, max=1)
+
+#         # std = torch.clamp(std, min=-5, max=2)
+#         # std = torch.clamp(std, min=-5, max=0)
+#         # std = std.exp()
+
+#         return CustomNormal(mu, std)
 
 class CustomNormal(torch.distributions.normal.Normal):
     def sample(self, sample_shape=torch.Size()):
