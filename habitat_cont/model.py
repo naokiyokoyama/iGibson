@@ -81,9 +81,10 @@ class PointNavResNetAgent:
         )
         model.to(DEVICE)
 
-        data_dict = OrderedDict()
-        with open(weights_path, 'r') as f:
-            data_dict = json.load(f)    
+        data_dict = torch.load(
+            weights_path, map_location="cpu"
+        )['state_dict']
+
         model.load_state_dict(
             {
                 k[len("actor_critic.") :]: torch.tensor(v)

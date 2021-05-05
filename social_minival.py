@@ -1,5 +1,6 @@
 import os 
 import numpy as np
+import argparse
 
 os.environ['CONFIG_FILE'] = '/coc/testnvme/nyokoyama3/gibson_challenge/iGibson/gibson2/examples/configs/locobot_social_nav.yaml'
 os.environ['TASK'] = 'social'
@@ -9,7 +10,7 @@ os.environ['EPISODE_DIR'] = '/coc/testnvme/nyokoyama3/gibson_challenge/iGibson/g
 from gibson2.challenge.challenge import Challenge
 
 from habitat_cont.model import PointNavResNetAgent as PointNavResNetAgentOrig
-WEIGHTS_PATH = 'weights/sn_1_49.json'
+WEIGHTS_PATH = 'weights/sn_1_49.pth'
 
 
 class PointNavResNetAgent(PointNavResNetAgentOrig):
@@ -25,7 +26,11 @@ class PointNavResNetAgent(PointNavResNetAgentOrig):
         return action
 
 def main():
-    agent = PointNavResNetAgent(WEIGHTS_PATH)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--weights_path', default=WEIGHTS_PATH)
+    args = parser.parse_args()
+
+    agent = PointNavResNetAgent(args.weights_path)
     challenge = Challenge()
     challenge.submit(agent)
 

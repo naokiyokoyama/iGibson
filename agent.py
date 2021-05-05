@@ -16,6 +16,7 @@ from collections import OrderedDict, defaultdict
 from gibson2.challenge.challenge import Challenge
 
 DEVICE = torch.device("cuda")
+CHECKPOINT_PATH = os.environ['CHECKPOINT_PATH']
 
 def to_tensor(v): # DON'T CHANGE
     if torch.is_tensor(v):
@@ -196,7 +197,7 @@ class PointNavResNetAgentV2(PointNavResNetAgent):
 
 
 def main():
-    agent = PointNavResNetAgentV2(os.environ['CHECKPOINT_PATH'])
+    agent = PointNavResNetAgentV2(CHECKPOINT_PATH)
     challenge = Challenge()
     challenge.submit(agent)
 
