@@ -24,20 +24,17 @@ def to_tensor(v): # DON'T CHANGE
         return torch.tensor(v, dtype=torch.float)
 
 class PointNavResNetAgent:
-    def __init__(self, weights_path):
-
-        self.GAUSSIAN, self.DISCRETE_4, self.DISCRETE_6 = False, False, False
-        if 'd4' in weights_path:
-            self.DISCRETE_4 = True
-        elif 'd6' in weights_path:
-            self.DISCRETE_6 = True
-        elif 'gaussian' in weights_path or 'sn_' in weights_path:
-            self.GAUSSIAN = True
-
+    def __init__(self, weights_path, gaussian=True):
         self.model = self.load_model(weights_path)
         self.reset()
 
     def load_model(self, weights_path):
+
+        checkpoint = torch.load(
+            weights_path, map_location="cpu"
+        )
+
+        config = checkpoint['config']
 
         depth_256_space = SpaceDict({
             # 'depth': spaces.Box(low=0., high=1., shape=(256,256,1)),
@@ -50,41 +47,33 @@ class PointNavResNetAgent:
             )
         })
 
-        if self.GAUSSIAN:
+        if config.RL.POLICY.action_distribution_type == "gaussian":
             action_space = ActionSpace(
                 {
                     "linear_velocity": EmptySpace(),
                     "angular_velocity": EmptySpace(),
                 }
             )
-            action_distribution = 'gaussian'
-            dim_actions = 2
-        elif self.DISCRETE_4:
+            self.action_distribution = 'gaussian'
+        else:
             action_space = spaces.Discrete(4)
-            action_distribution = 'categorical'
-            dim_actions = 4
-        elif self.DISCRETE_6:
-            action_space = spaces.Discrete(6)
-            action_distribution = 'categorical'
-            dim_actions = 6
+            self.action_distribution = 'categorical'
 
         model = PointNavResNetPolicy(
             observation_space=depth_256_space,
             action_space=action_space,
             hidden_size=512,
-            rnn_type='LSTM',
+            rnn_type=config.RL.DDPPO.rnn_type,  
             num_recurrent_layers=2,
-            backbone='resnet50',
+            backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs=False,
             force_blind_policy=False,
-            action_distribution_type=action_distribution,
+            action_distribution_type=self.action_distribution,
         )
         model.to(DEVICE)
 
-        data_dict = torch.load(
-            weights_path, map_location="cpu"
-        )['state_dict']
-
+        # Load weights
+        data_dict = checkpoint['state_dict']
         model.load_state_dict(
             {
                 k[len("actor_critic.") :]: torch.tensor(v)
@@ -105,10 +94,12 @@ class PointNavResNetAgent:
         )
         self.not_done_masks = torch.zeros(1, 1, dtype=torch.bool, device=DEVICE)
 
-        if self.GAUSSIAN:
+        if self.action_distribution == 'gaussian':
             self.prev_actions = torch.zeros(1, 2, device=DEVICE)
         else:
-            self.prev_actions = torch.zeros(1, 1, device=DEVICE)
+            self.prev_actions = torch.zeros(
+                1, 1, dtype=torch.long, device=DEVICE
+            )
 
     def act(self, depth, pointgoal_with_gps_compass):
 
@@ -143,14 +134,13 @@ class PointNavResNetAgent:
         max_linear_speed = 1.0
         max_angular_speed = 1.0
 
-        if self.GAUSSIAN:
+        if self.action_distribution == 'gaussian':
             move_amount = torch.clip(actions[0], min=-1, max=1).item()
             turn_amount = torch.clip(actions[1], min=-1, max=1).item()
             move_amount = (move_amount+1.)/2.
-
-        elif self.DISCRETE_4:
+        else:
             action_index = actions.item()
-            move_amount, turn_amount = 0,0
+            move_amount, turn_amount = 0.0, 0.0
             if action_index == 0: # STOP
                 print('[STOP HAS BEEN CALLED]')
             elif action_index == 1: # Move FWD
@@ -159,23 +149,5 @@ class PointNavResNetAgent:
                 turn_amount = max_angular_speed
             else: # RIGHT
                 turn_amount = -max_angular_speed
-
-        elif self.DISCRETE_6:
-            action_index = actions.item()
-            move_amount, turn_amount = 0,0
-            if action_index == 0:
-                move_amount = max_linear_speed
-                turn_amount = -max_angular_speed
-            elif action_index == 1:
-                turn_amount = -max_angular_speed
-            elif action_index == 2:
-                move_amount = max_linear_speed
-            elif action_index == 3:
-                print('[STOP HAS BEEN CALLED]')
-            elif action_index == 4:
-                move_amount = max_linear_speed
-                turn_amount = max_angular_speed
-            elif action_index == 5: # 
-                turn_amount = max_angular_speed
 
         return move_amount, turn_amount
