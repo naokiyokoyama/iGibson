@@ -54,6 +54,8 @@ class PointNavResNetAgent:
                 }
             )
             self.action_distribution = 'gaussian'
+            vel_cfg = config.TASK_CONFIG.TASK.ACTIONS.VELOCITY_CONTROL
+            self.min_lin_vel = vel_cfg.LIN_VEL_RANGE[0] / 0.5
         else:
             self.num_actions = len(
                 config.TASK_CONFIG.TASK.ACTIONS.VELOCITY_CONTROL.get(
@@ -73,7 +75,7 @@ class PointNavResNetAgent:
             observation_space=depth_256_space,
             action_space=action_space,
             hidden_size=512,
-            rnn_type=config.RL.DDPPO.rnn_type,  
+            rnn_type=config.RL.DDPPO.rnn_type,
             num_recurrent_layers=2,
             backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs=False,
@@ -144,9 +146,13 @@ class PointNavResNetAgent:
         max_linear_speed = 1.0
         max_angular_speed = 1.0
         if self.action_distribution == 'gaussian':
-            move_amount = torch.clip(actions[0], min=-1, max=1).item()
-            turn_amount = torch.clip(actions[1], min=-1, max=1).item()
-            move_amount = (move_amount+1.)/2.
+            linear_velocity  = torch.clip(actions[0], min=-1, max=1).item()
+            angular_velocity = torch.clip(actions[1], min=-1, max=1).item()
+
+            if self.min_lin_vel == 0:
+                # Convert from [-1, 1] to [0, 1] range
+                linear_velocity = (linear_velocity + 1.0) / 2.0
+
         elif self.num_actions == 4:
             action_index = actions.item()
             discrete_actions = [
@@ -155,8 +161,8 @@ class PointNavResNetAgent:
                 [0.0, 1.0],
                 [0.0, -1.0],
             ]
-            move_amount, turn_amount = discrete_actions[action_index]
+            linear_velocity, angular_velocity = discrete_actions[action_index]
         elif self.num_actions == 9:
             action_index = actions.item()
-            move_amount, turn_amount = self.discrete_actions[action_index]
-        return move_amount, turn_amount
+            linear_velocity, angular_velocity = self.discrete_actions[action_index]
+        return linear_velocity, angular_velocity

@@ -40,7 +40,6 @@ class PointNavResNetAgent:
         config = checkpoint['config']
 
         depth_256_space = SpaceDict({
-            # 'depth': spaces.Box(low=0., high=1., shape=(256,256,1)),
             'depth': spaces.Box(low=0., high=1., shape=(180,320,1)),
             'pointgoal_with_gps_compass': spaces.Box(
                 low=np.finfo(np.float32).min,
@@ -58,15 +57,28 @@ class PointNavResNetAgent:
                 }
             )
             self.action_distribution = 'gaussian'
+            vel_cfg = config.TASK_CONFIG.TASK.ACTIONS.VELOCITY_CONTROL
+            self.min_lin_vel = vel_cfg.LIN_VEL_RANGE[0] / 0.5
         else:
-            action_space = spaces.Discrete(4)
+            self.num_actions = len(
+                config.TASK_CONFIG.TASK.ACTIONS.VELOCITY_CONTROL.get(
+                    'DISCRETE_ACTIONS',
+                    list(range(4))
+                )
+            )
+            action_space = spaces.Discrete(self.num_actions)
             self.action_distribution = 'categorical'
+
+            if self.num_actions == 9:
+                self.discrete_actions = (
+                    config.TASK_CONFIG.TASK.ACTIONS.VELOCITY_CONTROL.DISCRETE_ACTIONS
+                )
 
         model = PointNavResNetPolicy(
             observation_space=depth_256_space,
             action_space=action_space,
             hidden_size=512,
-            rnn_type=config.RL.DDPPO.rnn_type,  
+            rnn_type=config.RL.DDPPO.rnn_type,
             num_recurrent_layers=2,
             backbone=config.RL.DDPPO.backbone,
             normalize_visual_inputs=False,
@@ -136,24 +148,27 @@ class PointNavResNetAgent:
 
         max_linear_speed = 1.0
         max_angular_speed = 1.0
-
         if self.action_distribution == 'gaussian':
-            move_amount = torch.clip(actions[0], min=-1, max=1).item()
-            turn_amount = torch.clip(actions[1], min=-1, max=1).item()
-            move_amount = (move_amount+1.)/2.
-        else:
-            action_index = actions.item()
-            move_amount, turn_amount = 0.0, 0.0
-            if action_index == 0: # STOP
-                print('[STOP HAS BEEN CALLED]')
-            elif action_index == 1: # Move FWD
-                move_amount = max_linear_speed
-            elif action_index == 2: # LEFT
-                turn_amount = max_angular_speed
-            else: # RIGHT
-                turn_amount = -max_angular_speed
+            linear_velocity  = torch.clip(actions[0], min=-1, max=1).item()
+            angular_velocity = torch.clip(actions[1], min=-1, max=1).item()
 
-        return move_amount, turn_amount
+            if self.min_lin_vel == 0:
+                # Convert from [-1, 1] to [0, 1] range
+                linear_velocity = (linear_velocity + 1.0) / 2.0
+
+        elif self.num_actions == 4:
+            action_index = actions.item()
+            discrete_actions = [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [0.0, 1.0],
+                [0.0, -1.0],
+            ]
+            linear_velocity, angular_velocity = discrete_actions[action_index]
+        elif self.num_actions == 9:
+            action_index = actions.item()
+            linear_velocity, angular_velocity = self.discrete_actions[action_index]
+        return linear_velocity, angular_velocity
 
 class PointNavResNetAgentV2(PointNavResNetAgent):
     def act(self, observations):
