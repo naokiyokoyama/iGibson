@@ -30,7 +30,7 @@ def main():
     parser.add_argument('-p', '--weights_path', default=WEIGHTS_PATH)
     args = parser.parse_args()
 
-    agent = PointNavResNetAgent(args.weights_path)
+    agent = PointNavResNetAgent(args.weights_path, gaussian=False)
     challenge = Challenge()
     challenge.submit(agent)
 
